@@ -729,13 +729,12 @@ var sim = (function(){
 
   function loop(){
     raf = null;
-    var awake = document.hasFocus() && !document.hidden;
-    if(running && awake){
+    if(running){
       for(var i=0;i<STEPS;i++) integrate();
       frame++;
       updateUI(judge());
     }
-    if(active_ && awake) draw();
+    if(active_) draw();
     raf = requestAnimationFrame(loop);
   }
 
