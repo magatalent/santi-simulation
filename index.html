@@ -1,0 +1,1047 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<title>三體 · 三日凌空 — 三體問題模擬</title>
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<style>
+  :root{
+    --gold:#c8aa6e; --gold-2:#f0e6d2; --blue:#0ac8b9; --red:#e05a4f;
+    --bg:#05070a; --panel:rgba(10,16,22,.88); --line:rgba(200,170,110,.28);
+    --dim:#6d7674;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html,body{height:100%}
+  body{
+    background:var(--bg); color:var(--gold-2); overflow:hidden;
+    font-family:"Microsoft JhengHei","PingFang TC","Noto Sans TC",system-ui,sans-serif;
+    -webkit-font-smoothing:antialiased;
+  }
+  .bg{position:fixed;inset:0;z-index:0;background:
+    radial-gradient(120% 90% at 72% 12%, rgba(10,200,185,.07), transparent 60%),
+    radial-gradient(90% 80% at 18% 88%, rgba(200,170,110,.06), transparent 60%),
+    #05070a;}
+  .bg::after{content:"";position:absolute;inset:0;pointer-events:none;
+    background-image:radial-gradient(rgba(240,230,210,.13) .6px, transparent .7px);
+    background-size:3px 3px;opacity:.25}
+
+  .frame{position:fixed;left:50%;top:50%;z-index:2;width:1600px;height:900px;display:grid;
+    transform-origin:center center;transform:translate(-50%,-50%) scale(1);
+    grid-template-rows:56px 1fr 34px;grid-template-columns:296px 1fr 268px;}
+
+  /* 頂欄 */
+  .topbar{grid-column:1/-1;display:flex;align-items:center;gap:26px;padding:0 20px;
+    background:linear-gradient(180deg,rgba(6,10,14,.98),rgba(6,10,14,.72));
+    border-bottom:1px solid var(--line);position:relative;z-index:3}
+  .brand{display:flex;align-items:center;gap:10px;font-weight:700;letter-spacing:.14em;font-size:13px;color:var(--gold)}
+  .brand .mark{width:26px;height:26px;border:1px solid var(--gold);transform:rotate(45deg);
+    box-shadow:0 0 14px rgba(200,170,110,.35) inset;position:relative}
+  .brand .mark::after{content:"";position:absolute;inset:7px;border-radius:50%;background:var(--blue);
+    box-shadow:0 0 10px var(--blue)}
+  .tabs{display:flex;gap:4px}
+  .tab{padding:6px 16px;font-size:12.5px;letter-spacing:.18em;color:#8b938f;position:relative}
+  .tab.on{color:var(--gold-2)}
+  .tab.on::after{content:"";position:absolute;left:12%;right:12%;bottom:-1px;height:2px;
+    background:linear-gradient(90deg,transparent,var(--gold),transparent)}
+  .me{margin-left:auto;display:flex;align-items:center;gap:10px;font-size:12px;color:#9aa3a0}
+  .me b{color:var(--gold-2);font-weight:600;letter-spacing:.06em}
+
+  /* 左側目錄 */
+  .side{padding:18px 14px 10px;border-right:1px solid rgba(200,170,110,.14);
+    background:linear-gradient(180deg,rgba(6,10,14,.72),rgba(6,10,14,.5));overflow:auto}
+  .side h4{font-size:10.5px;letter-spacing:.34em;color:var(--dim);margin:0 6px 12px}
+  .chap{display:flex;gap:10px;align-items:flex-start;padding:9px 10px;margin-bottom:2px;
+    border-left:2px solid transparent;cursor:pointer;transition:.18s;color:#8e9794}
+  .chap .n{font-family:Consolas,monospace;font-size:10px;color:#5c6663;padding-top:2px}
+  .chap .t{font-size:12.5px;letter-spacing:.05em;line-height:1.45}
+  .chap:hover{color:var(--gold-2);background:rgba(200,170,110,.05)}
+  .chap.on{border-left-color:var(--gold);background:linear-gradient(90deg,rgba(200,170,110,.14),transparent);color:var(--gold-2)}
+  .chap.on .n{color:var(--gold)}
+  .side .foot{margin-top:16px;padding:10px 8px 0;border-top:1px solid rgba(200,170,110,.14);
+    font-size:10.5px;line-height:1.7;color:#5f6966}
+
+  /* 主舞台 */
+  .stage{position:relative;overflow:hidden;z-index:1}
+  .slide{position:absolute;inset:0;padding:36px 52px 24px;display:none}
+  .slide.show{display:block;animation:in .55s cubic-bezier(.2,.8,.25,1) both}
+  @keyframes in{from{opacity:0;transform:translateY(22px)}to{opacity:1;transform:none}}
+  .kicker{display:flex;align-items:center;gap:12px;font-size:11px;letter-spacing:.36em;color:var(--gold);margin-bottom:14px}
+  .kicker::before{content:"";width:34px;height:1px;background:var(--gold);opacity:.7}
+  h1{font-size:74px;line-height:1.02;letter-spacing:.03em;font-weight:800;
+    background:linear-gradient(180deg,#fff8e8,#d9c49a 62%,#a98b52);
+    -webkit-background-clip:text;background-clip:text;color:transparent}
+  h2{font-size:38px;line-height:1.15;letter-spacing:.02em;font-weight:700;color:#f4ecdd;margin-bottom:6px}
+  h2 em{font-style:normal;color:var(--gold)}
+  .sub{font-size:14px;color:#9aa5a2;letter-spacing:.06em;margin-top:12px;line-height:1.9;max-width:840px}
+  .sub b{color:#fff}
+  .sub .g{color:var(--gold)}
+  .rule{height:1px;background:linear-gradient(90deg,var(--gold),transparent);margin:16px 0 18px}
+
+  /* 卡片 */
+  .cards{display:grid;gap:14px}
+  .card{position:relative;padding:16px 18px;background:var(--panel);
+    border:1px solid rgba(200,170,110,.2);border-top:1px solid rgba(200,170,110,.45)}
+  .card .lb{font-size:10.5px;letter-spacing:.3em;color:var(--gold);margin-bottom:8px}
+  .card p{font-size:13px;line-height:1.85;color:#b8c2bf}
+  .card b{color:#fff}
+
+  /* 數據 */
+  .stats{display:grid;grid-template-columns:repeat(4,1fr);gap:14px}
+  .stat{padding:14px 16px;border:1px solid rgba(200,170,110,.18);background:rgba(10,16,22,.6)}
+  .stat .k{font-size:10.5px;letter-spacing:.26em;color:var(--gold);margin-bottom:8px}
+  .stat .v{font-size:28px;font-weight:800;font-family:Consolas,monospace;color:#fff;line-height:1;white-space:nowrap}
+  .stat .v small{font-size:12px;color:#8d9794;font-weight:400;margin-left:4px}
+  .stat .d{font-size:11.5px;color:#8d9794;margin-top:8px;line-height:1.6}
+
+  .vcenter{height:100%;display:flex;flex-direction:column;justify-content:center}\n  /* 引言 */
+  .quote{max-width:920px;font-size:30px;line-height:1.75;letter-spacing:.02em;color:#f2e9d8}
+  .quote::before{content:"“";color:var(--gold);font-size:64px;line-height:0;vertical-align:-18px;margin-right:6px}
+  .who{margin-top:22px;font-size:12px;letter-spacing:.28em;color:var(--gold)}
+
+  /* 右欄 */
+  .rail{grid-column:3;border-left:1px solid rgba(200,170,110,.14);padding:16px 14px;position:relative;z-index:3;
+    background:linear-gradient(180deg,rgba(6,10,14,.82),rgba(6,10,14,.62));font-size:11.5px;overflow:auto}
+  .rail h5{font-size:10px;letter-spacing:.3em;color:var(--dim);margin-bottom:10px}
+  .rail .row{display:flex;justify-content:space-between;padding:7px 0;border-bottom:1px dashed rgba(200,170,110,.13);
+    color:#9aa5a2;letter-spacing:.04em}
+  .rail .row b{color:#e8e0cf;font-weight:600;font-family:Consolas,monospace;font-size:11px}
+  .rail .note{margin-top:14px;font-size:10.5px;line-height:1.8;color:#5f6966}
+  .rail .now{margin-top:14px;padding:10px;border:1px solid rgba(200,170,110,.22);background:rgba(200,170,110,.04)}
+  .rail .now .k{font-size:10px;letter-spacing:.28em;color:var(--gold);margin-bottom:6px}
+  .rail .now .v{font-size:13px;color:#fff;letter-spacing:.04em}
+
+  /* 底欄 */
+  .bottom{grid-column:1/-1;display:flex;align-items:center;gap:16px;padding:0 20px;
+    border-top:1px solid rgba(200,170,110,.14);background:rgba(6,10,14,.8);font-size:11px;color:var(--dim);position:relative;z-index:3}
+  .bar{flex:1;height:2px;background:rgba(200,170,110,.14);position:relative}
+  .bar i{position:absolute;inset:0 auto 0 0;width:0;background:linear-gradient(90deg,var(--gold),var(--blue));transition:width .4s ease}
+  .keys span{border:1px solid rgba(200,170,110,.28);padding:1px 6px;margin-left:6px;color:#9aa5a2}
+
+  /* 模擬器 */
+  .simwrap{display:grid;grid-template-columns:1fr 262px;gap:18px;height:calc(100% - 28px)}
+  .canvasbox{position:relative;border:1px solid rgba(200,170,110,.25);overflow:hidden;
+    background:radial-gradient(60% 60% at 50% 50%, #0a1e28, #04080b 70%);min-height:420px}
+  .canvasbox canvas{display:block}
+  .canvasbox .lbl{position:absolute;left:12px;top:10px;font-size:10.5px;letter-spacing:.26em;color:var(--gold);opacity:.8}
+  .canvasbox .hint{position:absolute;right:12px;bottom:8px;font-size:10.5px;color:#5f6966;letter-spacing:.08em}
+  .epoch{position:absolute;inset:0;display:none;align-items:center;justify-content:center;flex-direction:column;gap:14px;
+    background:radial-gradient(circle at 50% 45%, rgba(255,236,200,.28), rgba(120,30,10,.55) 45%, rgba(40,4,0,.86) 76%);
+    text-align:center;pointer-events:none}
+  .epoch.on{display:flex}
+  .epoch .t{font-size:46px;font-weight:800;letter-spacing:.3em;color:#fff4dc;
+    text-shadow:0 0 40px rgba(255,190,110,.9),0 0 90px rgba(255,110,40,.7)}
+  .epoch .s{font-size:13px;letter-spacing:.3em;color:#ffd9b0;opacity:.92}
+  .epoch.destroy .t{color:#ffd2c8;text-shadow:0 0 40px rgba(224,90,79,.9),0 0 90px rgba(150,10,10,.8)}
+  .epoch.destroy{background:radial-gradient(circle at 50% 45%, rgba(255,160,140,.22), rgba(120,10,10,.6) 45%, rgba(30,0,0,.9) 76%)}
+  .btn{font-family:inherit;font-size:12px;letter-spacing:.14em;padding:8px 10px;cursor:pointer;
+    color:#d8dfdc;background:rgba(200,170,110,.06);border:1px solid rgba(200,170,110,.3);transition:.18s}
+  .btn:hover{background:rgba(200,170,110,.16);color:#fff}
+  .btn.on{border-color:rgba(10,200,185,.55);color:var(--blue);background:rgba(10,200,185,.08)}
+
+  #rot{position:fixed;inset:0;z-index:9;display:none;align-items:center;justify-content:center;
+    background:rgba(4,7,10,.92);color:#c8aa6e;font-size:16px;letter-spacing:.24em}
+
+  /* 視覺圖 */
+  .fig{position:relative;height:300px;border:1px solid rgba(200,170,110,.22);overflow:hidden;
+    background:radial-gradient(70% 80% at 50% 40%, rgba(10,26,34,.85), #04080b 72%)}
+  .orbit{position:absolute;left:50%;top:50%;border:1px dashed rgba(200,170,110,.2);border-radius:50%;
+    transform:translate(-50%,-50%)}
+  .sun{position:absolute;border-radius:50%;transform:translate(-50%,-50%)}
+  .sun.s1{width:22px;height:22px;background:radial-gradient(circle at 35% 30%, #fff6dd, #f0b45a 55%, #a8551c);
+    box-shadow:0 0 34px rgba(240,180,90,.85),0 0 80px rgba(240,140,50,.35)}
+  .sun.s2{width:18px;height:18px;background:radial-gradient(circle at 35% 30%, #eafff9, #4fd6c6 55%, #0b6f7d);
+    box-shadow:0 0 30px rgba(10,200,185,.8),0 0 74px rgba(10,140,180,.32)}
+  .sun.s3{width:24px;height:24px;background:radial-gradient(circle at 35% 30%, #ffe6e0, #e05a4f 58%, #7a1414);
+    box-shadow:0 0 32px rgba(224,90,79,.8),0 0 78px rgba(160,20,20,.32)}
+  .planet{position:absolute;width:13px;height:13px;border-radius:50%;transform:translate(-50%,-50%);
+    background:radial-gradient(circle at 35% 32%, #dff7f2, #2b8f96 60%, #0b3a44);box-shadow:0 0 16px rgba(10,200,185,.7)}
+
+  /* 文明時間軸 */
+  .tl{position:relative;height:130px;margin-top:6px}
+  .tl .axis{position:absolute;left:0;right:0;top:70px;height:1px;background:rgba(200,170,110,.3)}
+  .tl .bar{position:absolute;height:10px;top:65px;border-radius:2px}
+  .tl .bar.ok{background:linear-gradient(180deg,rgba(200,170,110,.85),rgba(200,170,110,.35))}
+  .tl .bar.dark{background:linear-gradient(180deg,rgba(224,90,79,.85),rgba(224,90,79,.3))}
+  .tl .bar.cur{background:linear-gradient(180deg,rgba(10,200,185,.95),rgba(10,200,185,.4));box-shadow:0 0 18px rgba(10,200,185,.45)}
+  .tl .lab{position:absolute;font-size:10.5px;color:#8d9794;letter-spacing:.08em;white-space:nowrap}
+
+  /* 星野背景（鋪滿全頁，減少死黑） */
+  #stars{position:fixed;inset:0;z-index:0;pointer-events:none;opacity:.85}
+  /* 首頁主視覺：三日凌空 */
+  .hero{position:absolute;left:0;right:0;bottom:0;width:100%;height:47%;pointer-events:none}
+  .hero-cap{position:absolute;right:52px;bottom:14px;font-size:10.5px;letter-spacing:.3em;color:rgba(200,170,110,.6)}
+  /* 混沌三聯圖 */
+  .chaos{position:absolute;left:52px;right:52px;bottom:22px;display:grid;grid-template-columns:repeat(3,1fr);gap:14px}
+  .chaos .cell{position:relative;height:200px;border:1px solid rgba(200,170,110,.2);
+    background:radial-gradient(70% 70% at 50% 45%, rgba(8,26,34,.75), #04080b 72%);overflow:hidden}
+  .chaos .cell canvas{display:block;width:100%;height:100%}
+  .chaos .cap{position:absolute;left:10px;top:8px;font-size:10px;letter-spacing:.22em;color:var(--gold);opacity:.9}
+  .chaos .val{position:absolute;right:10px;top:8px;font-size:10.5px;font-family:Consolas,monospace;color:#8d9794}
+</style>
+</head>
+<body>
+<div class="bg"></div>
+<canvas id="stars"></canvas>
+
+<div class="frame">
+  <div class="topbar">
+    <div class="brand"><div class="mark"></div>TRI&nbsp;SOLARIS</div>
+    <div class="tabs">
+      <div class="tab on">三體問題</div>
+      <div class="tab">行星</div>
+      <div class="tab">紀元</div>
+      <div class="tab">文明</div>
+      <div class="tab">逃逸</div>
+    </div>
+    <div class="me"><b>地球往事</b><span>· 危機紀元前</span></div>
+  </div>
+
+  <div class="side" id="side"></div>
+
+  <div class="stage" id="stage">
+
+    <section class="slide" data-ch="三日凌空">
+      <div class="kicker">TRISOLARIS · 三體恆星系統 · 半人馬座 α</div>
+      <h1>三日凌空</h1>
+      <div class="sub">三顆恆星以無解的方式互相拉扯，行星在它們之間被拖進拖出。<br>
+        <b>一百九十次文明</b>，被亂紀元的寒夜凍成冰，又被烈焰解凍、重新爬起來。<br>
+        這是那份報告的起點：<span class="g">沒有規律，才是唯一的規律。</span></div>
+      <div class="rule"></div>
+      <div class="stats">
+        <div class="stat"><div class="k">恆星</div><div class="v">3<small>顆</small></div><div class="d">無解析解、混沌不可預測</div></div>
+        <div class="stat"><div class="k">文明次數</div><div class="v">191<small>次</small></div><div class="d">遊戲中記錄的文明輪次</div></div>
+        <div class="stat"><div class="k">亂紀元</div><div class="v">不可測<small>長度</small></div><div class="d">無法預測下一輪何時結束</div></div>
+        <div class="stat"><div class="k">出路</div><div class="v">逃逸<small>主義</small></div><div class="d">離開比預測更便宜</div></div>
+      </div>
+      <canvas id="heroCv" class="hero"></canvas>
+      <div class="hero-cap">FIG. 01 · 三日凌空 · 行星表面觀測</div>
+    </section>
+
+    <section class="slide" data-ch="為什麼算不出來">
+      <div class="kicker">三體問題 · THE THREE-BODY PROBLEM</div>
+      <h2>兩個天體有解，<em>第三個一出現，解就碎了</em></h2>
+      <div class="sub">牛頓給出雙體問題的閉式解；龐加萊在一八八九年證明：三體的運動<b>沒有通解</b>。不是「還沒有人算出來」，是<b>不存在</b>一個式子能寫出它。</div>
+      <div class="rule"></div>
+      <div class="cards" style="grid-template-columns:repeat(3,1fr)">
+        <div class="card"><div class="lb">01 對稱被打破</div>
+          <p>雙體只受一條共同的中心力，行星繞質心走橢圓。第三顆星插進來，每顆星都被另外兩顆同時拉扯，<b>軌道的「固定」假設當場失效</b>。</p></div>
+        <div class="card"><div class="lb">02 對初始條件敏感</div>
+          <p>位置差 1%，一百步後可能走上完全相反的路。這就是混沌：<b>誤差不是慢慢累積，是被放大</b>。</p></div>
+        <div class="card"><div class="lb">03 只能數值推</div>
+          <p>既然沒有式子，就只能用數值方法一步步往前推。每一步都有誤差，所以<b>越往後算越不可信</b>——三體人算得再久也逃不掉這條界。</p></div>
+      </div>
+      <div class="sub" style="margin-top:22px">所以你眼前這個模擬，<b>不是動畫</b>：它用同一套積分器，從你按下去的那一刻起，一步步算出下一格位置。<br>下面三格是<b>同一組初始條件</b>，只差 0.002 與 0.02；<span class="g">Δ 是它跟基準軌道的最大偏差</span>，看它怎麼長大。</div>
+      <div class="chaos" id="chaos"></div>
+    </section>
+
+    <section class="slide" data-ch="模擬器">
+      <div class="kicker" style="margin-bottom:10px">LIVE SIMULATION · 可拖曳、可調整</div>
+      <div class="simwrap">
+        <div class="canvasbox" id="cbox">
+          <div class="lbl">三體恆星 · 行星運行</div>
+          <canvas id="cv"></canvas>
+          <div class="epoch" id="ep"><div class="t" id="epT">三日凌空</div><div class="s" id="epS">文明毀滅</div></div>
+          <div class="hint">拖曳恆星改初始條件 · 空白鍵暫停</div>
+        </div>
+        <div style="display:flex;flex-direction:column;gap:9px">
+          <div class="stat" style="padding:9px 12px"><div class="k">模擬時間</div>
+            <div class="v" id="tSim" style="font-size:20px">0.0</div></div>
+          <div class="stat" style="padding:9px 12px"><div class="k">行星狀態</div>
+            <div class="v" id="tEra" style="font-size:18px;color:#0ac8b9">恆紀元</div>
+            <div class="d" id="tEraD">行星穩定，文明繁榮</div></div>
+          <div class="stat" style="padding:9px 12px"><div class="k">地表溫度</div>
+            <div class="v" id="tTemp" style="font-size:20px">20 <small>°C</small></div></div>
+          <div class="stat" style="padding:9px 12px"><div class="k">最近恆星距離</div>
+            <div class="v" id="tNear" style="font-size:18px">—</div></div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+            <button class="btn" id="bPause">暫停</button>
+            <button class="btn" id="bReset">重置</button>
+            <button class="btn" id="bRandom">隨機三體</button>
+            <button class="btn on" id="bTrail">軌跡</button>
+          </div>
+          <div class="card" style="padding:10px 12px"><div class="lb" style="margin-bottom:6px">混沌測試</div>
+            <p style="font-size:11.5px;line-height:1.7">開啟後，<b>影子行星</b>以只差 0.001 的初始條件同行。看它多久跟原本那顆分道揚鑣——這就是三體人算不準的原因。</p>
+            <button class="btn" id="bTwin" style="margin-top:8px;width:100%">開啟影子行星</button>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="slide" data-ch="紀元">
+      <div class="kicker">恆紀元 · 亂紀元 · 三日連珠</div>
+      <h2>文明只在<em>恆紀元</em>裡活著</h2>
+      <div class="sub">三體人把行星的天氣分成兩種。<b>恆紀元</b>：行星穩定地被一顆恆星支配，農作物能長大。<b>亂紀元</b>：軌道被扯亂，氣溫在幾十天內從酷熱跳進嚴寒。</div>
+      <div class="rule"></div>
+      <div class="fig">
+        <div class="orbit" style="width:420px;height:300px"></div>
+        <div class="orbit" style="width:280px;height:200px"></div>
+        <div class="orbit" style="width:150px;height:106px"></div>
+        <svg id="chaos" viewBox="0 0 760 300" width="100%" height="100%" style="position:absolute;inset:0"></svg>
+        <div class="sun s2" style="left:27%;top:30%"></div>
+        <div class="sun s1" style="left:55%;top:38%"></div>
+        <div class="sun s3" style="left:74%;top:26%"></div>
+        <div class="planet" style="left:24%;top:74%"></div>
+        <div style="position:absolute;left:16px;bottom:12px;font-size:11px;letter-spacing:.22em;color:var(--gold)">三顆恆星的引力位勢：行星不管走到哪，都被三個方向同時拉扯</div>
+      </div>
+      <div class="cards" style="grid-template-columns:repeat(3,1fr);margin-top:14px">
+        <div class="card"><div class="lb">恆紀元</div>
+          <p>行星穩定，文明發展、科學起飛。<b>但沒有人知道它會持續多久</b>——這正是三體世界最殘忍的地方：希望永遠是限時的。</p></div>
+        <div class="card"><div class="lb">亂紀元</div>
+          <p>軌道失控。文明的做法不是預測，是<b>脫水（Dehydration）</b>：把身體的水抽掉，捲成乾皮，等亂紀元過去再泡水甦醒。</p></div>
+        <div class="card"><div class="lb">三日連珠</div>
+          <p>三顆恆星連成一線，引力疊加、輻射暴增，行星瞬間沸騰。<b>這是文明的歸零鍵</b>，也是小說裡最著名的那一幕。</p></div>
+      </div>
+    </section>
+
+    <section class="slide" data-ch="第一百九十一號文明">
+      <div class="kicker">WHAT REMAINS AFTER 190 DESTRUCTIONS</div>
+      <h2>每一次毀滅，都沒有<em>抹掉知識</em></h2>
+      <div class="sub">文明可以凍死、燒光、被撕碎，但<b>石頭上的觀測紀錄還在</b>。下一代文明從殘骸裡撿起來，繼續往前——這是整部三體的隱喻：記憶是唯一的續命裝置。</div>
+      <div class="rule"></div>
+      <div class="tl" id="tl">
+        <div class="axis"></div>
+        <div class="lab" style="left:0;top:42px">第 1 號文明</div>
+        <div class="lab" style="right:0;top:42px;color:#0ac8b9">第 191 號（現在）</div>
+        <div class="lab" style="left:0;top:96px;color:#5f6966">金 = 倖存到下一個恆紀元　紅 = 被亂紀元／烈焰／寒夜毀滅　青 = 目前這一輪</div>
+      </div>
+      <div class="cards" style="grid-template-columns:repeat(2,1fr);margin-top:6px">
+        <div class="card"><div class="lb">玩家看到的</div>
+          <p>登入〈三體〉的那一刻，你是幾百次毀滅之後的又一個「新人」。所屬的文明分成三派：<b>降臨派</b>（迎接三體人）、<b>拯救派</b>（改造三體世界）、<b>倖存派</b>（把自己交給三體）。</p></div>
+        <div class="card"><div class="lb">三體人看到的</div>
+          <p>對三體人而言，毀滅不是悲劇，是<b>常態的氣候</b>。他們不會為文明哭泣，只會計算下一輪還剩多久。所以他們才那麼想要一個恆星。</p></div>
+      </div>
+    </section>
+
+    <section class="slide" data-ch="逃逸主義">
+      <div class="kicker">ESCAPE · 比預測更便宜的選擇</div>
+      <h2>算不出明天，就<em>換一顆恆星</em></h2>
+      <div class="sub">三體人花了幾百年想解決三體問題，最後的答案不是數學，而是<b>一次航行</b>：向地球出發。這是整部小說最冷的判斷——<span class="g">當預測的成本高於遷移，就不要預測了。</span></div>
+      <div class="rule"></div>
+      <div class="cards" style="grid-template-columns:repeat(3,1fr)">
+        <div class="card"><div class="lb">01 成本比較</div>
+          <p>要算清三體軌道，需要越縮越小的時間步長，成本爆炸且永遠有殘差。<b>把整艘艦隊推出去，只需要知道「哪裡有穩定的恆星」</b>。</p></div>
+        <div class="card"><div class="lb">02 情報先行</div>
+          <p>智子先到。三體人還沒出發，就已經把地球的每一步看光。<b>看不見的那一方，永遠在猜</b>——這是雙方不對稱的起點。</p></div>
+        <div class="card"><div class="lb">03 黑暗森林</div>
+          <p>但抵達不代表安全。宇宙中的文明彼此看不見、無法判斷善惡，<b>理性的做法是消除</b>。三體人以為自己找到了家，其實只是換了一個更危險的森林。</p></div>
+      </div>
+      <div class="sub" style="margin-top:20px">所以這份報告的結論可以寫成一句：<b>文明能做的不是預測未來，而是在被毀滅之前，把知識和選擇先存下來。</b></div>
+      <div class="panel" style="position:absolute;left:52px;right:52px;bottom:20px;height:300px;
+        border:1px solid rgba(200,170,110,.18);background:rgba(6,10,14,.55)">
+        <div style="position:absolute;left:12px;top:8px;font-size:10.5px;letter-spacing:.24em;color:var(--gold);opacity:.9">誤差隨預測時間的成長</div>
+        <div style="position:absolute;right:12px;top:8px;font-size:10.5px;color:#8d9794">三次模擬 · 步長 0.002 / 0.0005 / 0.0001</div>
+        <canvas id="errCv" style="position:absolute;inset:26px 12px 10px 12px;width:calc(100% - 24px);height:calc(100% - 36px)"></canvas>
+      </div>
+    </section>
+
+    <section class="slide" data-ch="給歲月以文明">
+      <div class="vcenter"><div class="kicker">結論</div>
+      <div class="quote">給歲月以文明，而不是給文明以歲月。</div>
+      <div class="who">— 《三體 III：死神永生》</div>
+      <div class="rule" style="margin-top:32px"></div>
+      <div class="sub">三體問題的可怕之處不是「沒有答案」，是<b>你明知道它沒有答案，還是要靠它活下去</b>。<br>
+        第一百九十一號文明、被凍住的君王、能看清地球的智子——每一次毀滅之後，留下來的都只有同一句話：<br>
+        <span class="g">規律不存在，但選擇還在。</span></div></div>
+    </section>
+
+  </div>
+
+  <div class="rail">
+    <h5>系統資訊</h5>
+    <div class="row"><span>恆星數</span><b>3</b></div>
+    <div class="row"><span>行星</span><b>Trisolaris</b></div>
+    <div class="row"><span>星系</span><b>半人馬座 α</b></div>
+    <div class="row"><span>積分器</span><b>Verlet</b></div>
+    <div class="row"><span>時間步</span><b>0.002</b></div>
+    <div class="row"><span>每幀步數</span><b>4</b></div>
+    <div class="row"><span>文明次數</span><b>191</b></div>
+    <div class="now"><div class="k">即時狀態</div><div class="v" id="railNow">尚未開始</div></div>
+    <div class="note">恆星、行星與紀元判定皆由同一套牛頓重力即時計算；尺度與顏色為可讀性調整，非真實比例。故事元素來自劉慈欣《三體》。</div>
+  </div>
+
+  <div class="bottom">
+    <div>01 / 07</div>
+    <div class="bar"><i id="bar"></i></div>
+    <div class="keys">← → 切換<span>F</span>全螢幕<span>空白</span>暫停模擬</div>
+  </div>
+</div>
+
+<div id="rot">↻ 請把手機橫過來</div>
+
+<script>
+/* ===== 目錄 / 翻頁 ===== */
+var slides = Array.prototype.slice.call(document.querySelectorAll('.slide'));
+var side = document.getElementById('side');
+side.innerHTML = '<h4>章節</h4>' + slides.map(function(s,i){
+  return '<div class="chap" data-i="'+i+'"><div class="n">'+String(i+1).padStart(2,'0')+'</div>'+
+         '<div class="t">'+s.dataset.ch+'</div></div>';
+}).join('') + '<div class="foot">專題：三體問題 × 混沌<br>模擬：即時數值積分<br>文本：劉慈欣《三體》</div>';
+var chaps = Array.prototype.slice.call(side.querySelectorAll('.chap'));
+
+var cur = -1;
+function go(i){
+  i = Math.max(0, Math.min(slides.length-1, i));
+  if(i === cur) return;
+  cur = i;
+  slides.forEach(function(s,j){ s.classList.toggle('show', j===i); });
+  chaps.forEach(function(c){ c.classList.toggle('on', +c.dataset.i === i); });
+  document.getElementById('bar').style.width = ((i+1)/slides.length*100)+'%';
+  document.querySelector('.bottom > div').textContent =
+    String(i+1).padStart(2,'0') + ' / ' + String(slides.length).padStart(2,'0');
+  sim.active = (i === 2);
+}
+document.addEventListener('keydown', function(e){
+  var t = e.target.tagName;
+  if(t==='BUTTON' || t==='INPUT') return;
+  if(e.key==='ArrowRight' || e.key===' ' || e.key==='PageDown'){ e.preventDefault(); go(cur+1); }
+  else if(e.key==='ArrowLeft' || e.key==='PageUp') go(cur-1);
+  else if(e.key==='Home') go(0);
+  else if(e.key==='End') go(slides.length-1);
+  else if(e.key.toLowerCase()==='f'){ if(document.documentElement.requestFullscreen) document.documentElement.requestFullscreen(); }
+});
+chaps.forEach(function(c){ c.onclick = function(){ go(+c.dataset.i); }; });
+
+/* ===== 引力位勢插圖 ===== */
+(function(){
+  var svg = document.getElementById('chaos');
+  var NS = 'http://www.w3.org/2000/svg';
+  var S = [[205,90],[418,114],[562,78]];
+  for(var k=1;k<=16;k++){
+    var p = document.createElementNS(NS,'path'), d = '';
+    for(var a=0;a<=360;a+=4){
+      var th = a*Math.PI/180;
+      var x = Math.cos(th)*k*12*1.5, y = Math.sin(th)*k*12*0.52;
+      var warp = 0;
+      S.forEach(function(sp){
+        var dx = 380+x-sp[0], dy = 150+y-sp[1];
+        warp += 2600/(dx*dx + dy*dy + 600);
+      });
+      var f = 1 + Math.min(warp,1.3)*0.55;
+      d += (a===0?'M':'L') + (380+x*f).toFixed(1) + ' ' + (150+y*f).toFixed(1);
+    }
+    p.setAttribute('d', d+'Z');
+    p.setAttribute('fill','none');
+    p.setAttribute('stroke','rgba(200,170,110,'+Math.max(0.03, 0.30-k*0.016).toFixed(3)+')');
+    p.setAttribute('stroke-width','1');
+    svg.appendChild(p);
+  }
+})();
+
+/* ===== 文明時間軸 ===== */
+(function(){
+  var tl = document.getElementById('tl');
+  var TOTAL = 191;
+  for(var i=0;i<TOTAL;i++){
+    var isNow = i === TOTAL-1;
+    var dark = (i % 4 === 1) || (i % 7 === 2);
+    var b = document.createElement('div');
+    b.className = 'bar ' + (isNow ? 'cur' : (dark ? 'dark' : 'ok'));
+    var w = 100/TOTAL;
+    b.style.left = (i*w)+'%';
+    b.style.width = 'calc('+w+'% - 1.5px)';
+    b.style.height = isNow ? '14px' : (dark ? '10px' : '7px');
+    b.style.top = isNow ? '63px' : (dark ? '65px' : '66.5px');
+    b.title = '第 '+(i+1)+' 號文明' + (isNow ? '（現在）' : (dark ? ' · 毀於亂紀元／烈焰' : ' · 倖存'));
+    tl.appendChild(b);
+  }
+})();
+
+/* ===== 三體模擬器 ===== */
+var sim = (function(){
+  var cv = document.getElementById('cv');
+  var ctx = cv.getContext('2d');
+  var W = 960, H = 600;
+  var G = 1, DT = 0.002, STEPS = 4;
+  var SCALE = 300;
+  var PR = 4;
+  var dpr = Math.min(window.devicePixelRatio || 1, 2);
+  var SOL = [
+    {x:-0.62, y:-0.14, vx: 0.30, vy:-0.86, m:1.0, c1:'#fff6dd', c2:'#f0b45a', name:'恆星 A'},
+    {x: 0.58, y: 0.20, vx:-0.74, vy:-0.30, m:1.0, c1:'#eafff9', c2:'#4fd6c6', name:'恆星 B'},
+    {x: 0.04, y: 0.72, vx: 0.44, vy: 1.16, m:1.0, c1:'#ffe6e0', c2:'#e05a4f', name:'恆星 C'}
+  ];
+  var COLOR = {'恆紀元':'#0ac8b9','亂紀元':'#c8955a','烈焰':'#e05a4f','嚴寒':'#5aa8d8','殲滅':'#ffffff'};
+  var VERDICT = {'恆紀元':'行星穩定，文明繁榮','亂紀元':'多顆恆星同時拉扯，軌道失控',
+    '烈焰':'行星被吸進恆星，地表沸騰','嚴寒':'行星遠離所有恆星，地表凍結','殲滅':'行星已毀'};
+
+  var bodies = [], planet = null, twin = null, t = 0;
+  var active_ = false, running = false;
+  var trailOn = true, twinOn = false, epochTimer = 0, started = false;
+  var civCount = 191, lastEra = '恆紀元', frame = 0, raf = null;
+  var K = 1, cw = 800, ch = 500;
+
+  function $(id){ return document.getElementById(id); }
+
+  function resize(){
+    var box = $('cbox');
+    if(!box || !box.clientWidth) return;
+    var w = box.clientWidth, h = box.clientHeight;
+    cw = w; ch = h;
+    cv.width = Math.round(w*dpr); cv.height = Math.round(h*dpr);
+    cv.style.width = w+'px'; cv.style.height = h+'px';
+    K = Math.min(w/W, h/H);
+  }
+
+  function rng(a){
+    return function(){
+      a |= 0; a = a + 0x6D2B79F5 | 0;
+      var t = Math.imul(a ^ a >>> 15, 1 | a);
+      t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t;
+      return ((t ^ t >>> 14) >>> 0) / 4294967296;
+    };
+  }
+
+  function reset(seed){
+    bodies = SOL.map(function(s){ return {x:s.x, y:s.y, vx:s.vx, vy:s.vy, m:s.m}; });
+    if(seed !== undefined){
+      var r = rng(seed);
+      bodies.forEach(function(b){
+        b.x += (r()-0.5)*0.30; b.y += (r()-0.5)*0.30;
+        b.vx += (r()-0.5)*0.22; b.vy += (r()-0.5)*0.22;
+      });
+    }
+    var A = bodies[0], r0 = 0.26, v0 = Math.sqrt(G*A.m/r0) * 0.85;
+    var px = A.x + r0, py = A.y;
+    planet = {x:px, y:py, vx:A.vx, vy:A.vy + v0, m:0, trail:[]};
+    twin   = {x:px+0.001, y:py, vx:A.vx, vy:A.vy + v0, m:0, trail:[]};
+    t = 0; epochTimer = 0; civCount = 191; lastEra = '恆紀元';
+    $('ep').className = 'epoch';
+  }
+
+  function acceleration(all){
+    var out = [];
+    for(var i=0;i<all.length;i++){
+      var ax=0, ay=0;
+      for(var j=0;j<all.length;j++){
+        if(i===j || all[j].m===0) continue;
+        var dx = all[j].x-all[i].x, dy = all[j].y-all[i].y;
+        var d2 = dx*dx + dy*dy + 0.0030;
+        var inv = G*all[j].m / (d2*Math.sqrt(d2));
+        ax += dx*inv; ay += dy*inv;
+      }
+      out.push({ax:ax, ay:ay});
+    }
+    return out;
+  }
+
+  function integrate(){
+    var all = bodies.concat(twinOn ? [planet, twin] : [planet]);
+    var a1 = acceleration(all), i;
+    for(i=0;i<all.length;i++){
+      all[i].x += all[i].vx*DT + 0.5*a1[i].ax*DT*DT;
+      all[i].y += all[i].vy*DT + 0.5*a1[i].ay*DT*DT;
+    }
+    var a2 = acceleration(all);
+    for(i=0;i<all.length;i++){
+      all[i].vx += 0.5*(a1[i].ax+a2[i].ax)*DT;
+      all[i].vy += 0.5*(a1[i].ay+a2[i].ay)*DT;
+    }
+    function push(p){
+      if(frame % 2 === 0) p.trail.push({x:p.x, y:p.y});
+      if(p.trail.length > 700) p.trail.shift();
+    }
+    push(planet);
+    if(twinOn) push(twin);
+    if(epochTimer > 0) epochTimer -= DT;
+    t += DT;
+  }
+
+  function judge(){
+    var dmin = Infinity, cnt = 0;
+    for(var i=0;i<bodies.length;i++){
+      var b = bodies[i];
+      var d = Math.hypot(b.x-planet.x, b.y-planet.y);
+      if(d < dmin) dmin = d;
+      if(d < 0.95) cnt++;
+    }
+    if(!isFinite(dmin) || Math.hypot(planet.x, planet.y) > 4){
+      return {era:'殲滅', dmin:Infinity, cnt:0};
+    }
+    var era;
+    if(dmin < 0.085) era = '烈焰';
+    else if(cnt >= 2) era = '亂紀元';
+    else if(dmin > 0.62) era = '嚴寒';
+    else era = '恆紀元';
+    return {era:era, dmin:dmin, cnt:cnt};
+  }
+
+  function draw(){
+    var w = cw, h = ch;
+    ctx.setTransform(dpr,0,0,dpr,0,0);
+    ctx.fillStyle = '#04080b';
+    ctx.fillRect(0,0,w,h);
+
+    ctx.setTransform(dpr*K, 0, 0, dpr*K, 0, 0);
+    var ox = (w/K - W)/2, oy = (h/K - H)/2;
+    ctx.translate(ox, oy);
+
+    // 網格
+    ctx.strokeStyle = 'rgba(200,170,110,.05)'; ctx.lineWidth = 1;
+    for(var g=-600; g<=600; g+=60){
+      ctx.beginPath(); ctx.moveTo(W/2+g, 0); ctx.lineTo(W/2+g, H); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(0, H/2+g); ctx.lineTo(W, H/2+g); ctx.stroke();
+    }
+    ctx.fillStyle = 'rgba(240,230,210,.9)';
+    ctx.beginPath(); ctx.arc(W/2, H/2, 1.2, 0, Math.PI*2); ctx.fill();
+
+    ctx.save();
+    ctx.translate(W/2, H/2);
+
+    function trailDraw(tr, rgb){
+      if(!trailOn || tr.length < 2) return;
+      for(var i=1;i<tr.length;i++){
+        var a = i/tr.length;
+        ctx.strokeStyle = 'rgba('+rgb+','+(a*a*0.7).toFixed(3)+')';
+        ctx.lineWidth = 0.5 + a*2.0;
+        ctx.beginPath(); ctx.moveTo(tr[i-1].x*SCALE, tr[i-1].y*SCALE);
+        ctx.lineTo(tr[i].x*SCALE, tr[i].y*SCALE); ctx.stroke();
+      }
+    }
+    trailDraw(planet.trail, '10,200,185');
+    if(twinOn) trailDraw(twin.trail, '224,90,79');
+
+    bodies.forEach(function(b, i){
+      var s = SOL[i], x = b.x*SCALE, y = b.y*SCALE, r = 16;
+      var gr = ctx.createRadialGradient(x-r*0.3, y-r*0.3, r*0.1, x, y, r*3.2);
+      gr.addColorStop(0, s.c1); gr.addColorStop(0.28, s.c2); gr.addColorStop(1, 'rgba(0,0,0,0)');
+      ctx.fillStyle = gr;
+      ctx.beginPath(); ctx.arc(x, y, r*3.2, 0, Math.PI*2); ctx.fill();
+      ctx.fillStyle = s.c2; ctx.shadowBlur = 30; ctx.shadowColor = s.c2;
+      ctx.beginPath(); ctx.arc(x, y, r*0.58, 0, Math.PI*2); ctx.fill();
+      ctx.shadowBlur = 0;
+      ctx.fillStyle = 'rgba(240,230,210,.68)';
+      ctx.font = '12px "Microsoft JhengHei", sans-serif';
+      ctx.fillText(s.name, x + r*0.9, y - r*0.85);
+    });
+
+    ctx.fillStyle = '#e8fffb'; ctx.shadowBlur = 20; ctx.shadowColor = '#0ac8b9';
+    ctx.beginPath(); ctx.arc(planet.x*SCALE, planet.y*SCALE, PR, 0, Math.PI*2); ctx.fill();
+    ctx.shadowBlur = 0;
+    if(twinOn){
+      ctx.fillStyle = '#ffe4dc'; ctx.shadowBlur = 16; ctx.shadowColor = '#e05a4f';
+      ctx.beginPath(); ctx.arc(twin.x*SCALE, twin.y*SCALE, PR, 0, Math.PI*2); ctx.fill();
+      ctx.shadowBlur = 0;
+    }
+    ctx.restore();
+  }
+
+  function showEpoch(era){
+    var ep = $('ep');
+    var dead = (era==='烈焰' || era==='嚴寒' || era==='殲滅');
+    ep.className = 'epoch on' + (dead ? ' destroy' : '');
+    $('epT').textContent = era;
+    $('epS').textContent = dead ? ('文明 #' + civCount + ' 開始毀滅')
+      : (era==='恆紀元' ? ('文明 #' + civCount + ' 重新建立') : '文明脫水，地面一切靜止');
+    epochTimer = dead ? 1.6 : 1.2;
+  }
+
+  function updateUI(j){
+    $('tSim').textContent = t.toFixed(1);
+    $('tEra').textContent = j.era;
+    $('tEra').style.color = COLOR[j.era];
+    $('tEraD').textContent = VERDICT[j.era];
+    var d = isFinite(j.dmin) ? j.dmin : 0;
+    var temp = Math.round(900*Math.exp(-d*3.4) - 20 + (j.cnt-1>0 ? 240*(j.cnt-1) : 0));
+    if(j.era === '殲滅') temp = NaN;
+    $('tTemp').innerHTML = (isFinite(temp) ? temp : '—') + ' <small>°C</small>';
+    $('tTemp').style.color = isFinite(temp) ? (temp > 120 ? '#e05a4f' : temp < -40 ? '#5aa8d8' : '#fff') : '#fff';
+    $('tNear').textContent = isFinite(j.dmin) ? (j.dmin*100).toFixed(1) + ' 單位' : '—';
+    $('railNow').textContent = j.era + ' · t=' + t.toFixed(1) + ' · 文明 ' + civCount;
+    $('railNow').style.color = COLOR[j.era];
+
+    if(j.era !== lastEra){
+      if(j.era !== '恆紀元' && lastEra === '恆紀元'){ civCount++; showEpoch(j.era); }
+      else if(j.era === '恆紀元' && lastEra !== '恆紀元'){ showEpoch('恆紀元'); }
+      lastEra = j.era;
+    }
+    if(epochTimer <= 0 && $('ep').classList.contains('on')) $('ep').className = 'epoch';
+  }
+
+  function loop(){
+    raf = null;
+    if(!active_) return;
+    if(running){
+      for(var i=0;i<STEPS;i++) integrate();
+      frame++;
+      updateUI(judge());
+      draw();
+    }
+    raf = requestAnimationFrame(loop);
+  }
+
+  $('bPause').onclick = function(){
+    running = !running;
+    $('bPause').textContent = running ? '暫停' : '繼續';
+    $('bPause').classList.toggle('on', !running);
+    if(active_ && !raf) raf = requestAnimationFrame(loop);
+  };
+  $('bReset').onclick = function(){ reset(); running = true; $('bPause').textContent='暫停'; draw(); };
+  $('bRandom').onclick = function(){ reset((Math.random()*1e9)|0); running = true; $('bPause').textContent='暫停'; draw(); };
+  $('bTrail').onclick = function(){ trailOn = !trailOn; $('bTrail').classList.toggle('on', trailOn); draw(); };
+  $('bTwin').onclick = function(){
+    twinOn = !twinOn;
+    $('bTwin').classList.toggle('on', twinOn);
+    $('bTwin').textContent = twinOn ? '關閉影子行星' : '開啟影子行星';
+    draw();
+  };
+
+  var drag = -1;
+  function toWorld(ev){
+    var r = cv.getBoundingClientRect();
+    var k = Math.min(r.width/W, r.height/H);
+    var x = (ev.clientX - r.left - (r.width - W*k)/2) / k;
+    var y = (ev.clientY - r.top - (r.height - H*k)/2) / k;
+    return {x: (x - W/2)/SCALE, y: (y - H/2)/SCALE};
+  }
+  cv.addEventListener('pointerdown', function(ev){
+    var w = toWorld(ev), best = -1, bd = 0.18;
+    bodies.forEach(function(b,i){ var d = Math.hypot(b.x-w.x, b.y-w.y); if(d < bd){ bd = d; best = i; } });
+    if(best >= 0){
+      drag = best;
+      if(cv.setPointerCapture) cv.setPointerCapture(ev.pointerId);
+      bodies[drag].vx = 0; bodies[drag].vy = 0;
+    }
+  });
+  cv.addEventListener('pointermove', function(ev){
+    if(drag < 0) return;
+    var w = toWorld(ev), b = bodies[drag];
+    var dx = w.x - b.x, dy = w.y - b.y;
+    planet.x += dx; planet.y += dy; twin.x += dx; twin.y += dy;
+    planet.trail.length = 0; twin.trail.length = 0;
+    b.x = w.x; b.y = w.y;
+    draw();
+  });
+  cv.addEventListener('pointerup', function(){ drag = -1; });
+  cv.addEventListener('pointercancel', function(){ drag = -1; });
+
+  function start(){
+    resize();
+    if(!bodies.length) reset();
+    if(!started){ started = true; running = true; }
+    draw();
+    if(!raf) raf = requestAnimationFrame(loop);
+  }
+
+  return {
+    start: start,
+    get active(){ return active_; },
+    set active(v){
+      active_ = v;
+      if(v) start();
+      else if(raf){ cancelAnimationFrame(raf); raf = null; }
+    }
+  };
+})();
+
+/* ===== 啟動 ===== */
+(function(){
+  var h = parseInt((location.hash||'').replace('#',''),10);
+  go(isFinite(h) && h > 0 ? h-1 : 0);
+})();
+
+function fit(){
+  var W = 1600, H = 900, fr = document.querySelector('.frame');
+  var rot = window.innerHeight > window.innerWidth*1.02;
+  var s = Math.min(window.innerWidth/W, window.innerHeight/H);
+  fr.style.transform = 'translate(-50%,-50%) scale(' + s + ')';
+  document.getElementById('rot').style.display = rot ? 'flex' : 'none';
+  if(sim.active) sim.start();
+}
+window.addEventListener('resize', fit);
+fit();
+</script>
+<script>
+(function(){
+  var DPR = Math.min(2, window.devicePixelRatio || 1);
+  function fitCanvas(c, w, h){
+    if (!(w>4) || !(h>4)) return c.getContext('2d');
+    c.width = Math.round(w*DPR); c.height = Math.round(h*DPR);
+    c.style.width = w+'px'; c.style.height = h+'px';
+    var x = c.getContext('2d'); x.setTransform(DPR,0,0,DPR,0,0);
+    return x;
+  }
+  var TAU = Math.PI*2;
+
+  /* ---------- 星野底圖 ---------- */
+  var sc = document.getElementById('stars'), sctx=null, stars=[], sw=0, sh=0;
+  function buildStars(){
+    sw = window.innerWidth; sh = window.innerHeight;
+    sctx = fitCanvas(sc, sw, sh);
+    stars = [];
+    var n = Math.round(sw*sh/2400);
+    for (var i=0;i<n;i++) stars.push({x:Math.random()*sw, y:Math.random()*sh,
+      r:Math.random()*1.15+0.15, a:Math.random()*0.5+0.1, p:Math.random()*TAU, s:Math.random()*0.9+0.25});
+    // 幾顆亮星
+    for (var k=0;k<7;k++) stars.push({x:Math.random()*sw, y:Math.random()*sh*0.9,
+      r:Math.random()*1.6+1.0, a:0.85, p:Math.random()*TAU, s:Math.random()*0.5+0.2});
+  }
+  function drawStars(t){
+    if (!sctx) return;
+    sctx.clearRect(0,0,sw,sh);
+    sctx.save(); sctx.translate(sw*0.68, sh*0.40); sctx.rotate(-0.26);
+    for (var k=1;k<=4;k++){
+      sctx.beginPath(); sctx.ellipse(0,0, 220*k, 82*k, 0, 0, TAU);
+      sctx.strokeStyle = 'rgba(200,170,110,'+(0.055 - k*0.009)+')';
+      sctx.lineWidth = 1; sctx.stroke();
+    }
+    sctx.restore();
+    for (var i=0;i<stars.length;i++){
+      var p = stars[i], tw = 0.55 + 0.45*Math.sin(t*p.s + p.p);
+      sctx.globalAlpha = p.a*tw;
+      sctx.fillStyle = (i%19===0) ? '#ffdcaa' : '#e2f1f3';
+      sctx.beginPath(); sctx.arc(p.x, p.y, p.r, 0, TAU); sctx.fill();
+    }
+    sctx.globalAlpha = 1;
+  }
+
+  /* ---------- 首頁：三日凌空 ---------- */
+  var hc = document.getElementById('heroCv'), hctx=null, hw=0, hh=0;
+  function buildHero(){
+    var r = hc.getBoundingClientRect();
+    hw = r.width || 1450; hh = r.height || 420;
+    hctx = fitCanvas(hc, hw, hh);
+  }
+  function drawHero(t){
+    if (!hctx) return;
+    hctx.clearRect(0,0,hw,hh);
+    var g = hctx.createLinearGradient(0, 0, 0, hh);
+    g.addColorStop(0,'rgba(24,16,9,0)');
+    g.addColorStop(.5,'rgba(62,34,13,.45)');
+    g.addColorStop(1,'rgba(6,5,4,.9)');
+    hctx.fillStyle = g; hctx.fillRect(0,0,hw,hh);
+
+    var suns = [
+      {x:hw*0.28, y:hh*0.40, r:hh*0.30, c:'255,226,170'},
+      {x:hw*0.55, y:hh*0.30, r:hh*0.235, c:'158,238,242'},
+      {x:hw*0.80, y:hh*0.43, r:hh*0.195, c:'255,152,112'}
+    ];
+    hctx.globalCompositeOperation = 'lighter';
+    for (var i=0;i<suns.length;i++){
+      var s = suns[i], rr = s.r*(1 + 0.05*Math.sin(t*0.7 + i*2.1));
+      var rg = hctx.createRadialGradient(s.x, s.y, 0, s.x, s.y, rr*2.6);
+      rg.addColorStop(0,'rgba('+s.c+',.95)');
+      rg.addColorStop(.16,'rgba('+s.c+',.5)');
+      rg.addColorStop(.5,'rgba('+s.c+',.10)');
+      rg.addColorStop(1,'rgba('+s.c+',0)');
+      hctx.fillStyle = rg; hctx.beginPath(); hctx.arc(s.x, s.y, rr*2.6, 0, TAU); hctx.fill();
+      // 恆星本體：邊緣偏暗、核心偏白
+      var dg = hctx.createRadialGradient(s.x - rr*0.10, s.y - rr*0.10, rr*0.05, s.x, s.y, rr*0.34);
+      dg.addColorStop(0,'rgba(255,255,248,.98)');
+      dg.addColorStop(.55,'rgba('+s.c+',.92)');
+      dg.addColorStop(1,'rgba('+s.c+',.38)');
+      hctx.fillStyle = dg; hctx.beginPath(); hctx.arc(s.x, s.y, rr*0.34, 0, TAU); hctx.fill();
+      // 日冕
+      hctx.strokeStyle = 'rgba('+s.c+',.20)'; hctx.lineWidth = 1;
+      hctx.beginPath(); hctx.arc(s.x, s.y, rr*0.52, 0, TAU); hctx.stroke();
+    }
+    hctx.globalCompositeOperation = 'source-over';
+
+    // 行星地平線
+    hctx.beginPath();
+    hctx.ellipse(hw*0.5, hh*1.66, hw*0.75, hh*1.05, 0, 0, TAU);
+    var hg = hctx.createLinearGradient(0, hh*0.62, 0, hh);
+    hg.addColorStop(0,'#0c1114'); hg.addColorStop(1,'#04070a');
+    hctx.fillStyle = hg; hctx.fill();
+
+    // 地表熱浪
+    for (var k=0;k<24;k++){
+      var y = hh*0.70 + k*3.6;
+      if (y > hh-4) break;
+      var w = hw*(0.25 + 0.45*Math.abs(Math.sin(k*1.7)));
+      hctx.globalAlpha = 0.10 + 0.10*Math.abs(Math.sin(t*1.5 + k*0.4));
+      hctx.strokeStyle = 'rgba(255,205,150,1)';
+      hctx.beginPath();
+      hctx.moveTo(hw*0.5 - w/2 + Math.sin(t*0.6 + k)*12, y);
+      hctx.bezierCurveTo(hw*0.4, y-2, hw*0.6, y+2, hw*0.5 + w/2 + Math.cos(t*0.5 + k)*12, y);
+      hctx.stroke();
+    }
+    hctx.globalAlpha = 1;
+  }
+
+  /* ---------- 混沌三聯圖：同一組初始條件，差 0.001 與 0.01 ---------- */
+  var box = document.getElementById('chaos'), cells = [];
+  var PERT = [0, 0.002, 0.02], COLS = ['#ffd9a0','#7fe6ef','#ff9b6b'];
+  function mkBodies(eps){
+    var arr = [
+      {x:-3.10, y: 0.00, vx: 0.00, vy:-0.60},
+      {x: 3.10, y: 0.00, vx: 0.00, vy: 0.60},
+      {x: 0.15+eps, y: 2.50, vx:-0.75, vy: 0.02}
+    ];
+    return arr.map(function(o){ return {x:o.x,y:o.y,vx:o.vx,vy:o.vy,m:1,tr:[]}; });
+  }
+  function accel(b, G){
+    var n=b.length, a=[], i, j;
+    for (i=0;i<n;i++) a.push([0,0]);
+    for (i=0;i<n;i++) for (j=i+1;j<n;j++){
+      var dx=b[j].x-b[i].x, dy=b[j].y-b[i].y;
+      var d2=dx*dx+dy*dy+0.02, inv=G/(d2*Math.sqrt(d2));
+      a[i][0]+=b[j].m*dx*inv; a[i][1]+=b[j].m*dy*inv;
+      a[j][0]-=b[i].m*dx*inv; a[j][1]-=b[i].m*dy*inv;
+    }
+    return a;
+  }
+  function stepBodies(b, dt, G){
+    var a = accel(b,G), i;
+    for (i=0;i<b.length;i++){ b[i].vx+=a[i][0]*dt*0.5; b[i].vy+=a[i][1]*dt*0.5;
+      b[i].x+=b[i].vx*dt; b[i].y+=b[i].vy*dt; }
+    a = accel(b,G);
+    for (i=0;i<b.length;i++){ b[i].vx+=a[i][0]*dt*0.5; b[i].vy+=a[i][1]*dt*0.5; }
+  }
+  function resetCell(c){ c.bodies = mkBodies(c.eps); c.t = 0; c.dev = 0; }
+  function buildChaos(){
+    for (var i=0;i<3;i++){
+      var cell = document.createElement('div'); cell.className='cell';
+      var cap = document.createElement('div'); cap.className='cap';
+      cap.textContent = i===0 ? '基準軌道' : ('初始差 ' + PERT[i]);
+      var val = document.createElement('div'); val.className='val'; val.textContent = 't = 0.0';
+      var cv = document.createElement('canvas');
+      cell.appendChild(cv); cell.appendChild(cap); cell.appendChild(val);
+      box.appendChild(cell);
+      cells.push({cv:cv, ctx:null, val:val, eps:PERT[i], bodies:mkBodies(PERT[i]), t:0, dev:0});
+    }
+    // 先跑一段，讓三張圖一打開就長得不一樣（混沌要時間才分岔）
+    for (var c2=0;c2<cells.length;c2++){
+      var cc = cells[c2];
+      for (var s=0;s<1200;s++){
+        for (var q=0;q<6;q++) stepBodies(cc.bodies, 0.0042, 1);
+        cc.t += 6*0.0042;
+        if (s%5===0){
+          for (var b2=0;b2<cc.bodies.length;b2++){
+            cc.bodies[b2].tr.push([cc.bodies[b2].x, cc.bodies[b2].y]);
+          }
+        }
+      }
+    }
+    resizeChaos();
+  }
+  function resizeChaos(){
+    for (var i=0;i<cells.length;i++){
+      var r = cells[i].cv.getBoundingClientRect();
+      if (r.width > 20) cells[i].ctx = fitCanvas(cells[i].cv, r.width, r.height);
+    }
+  }
+  function drawCell(c){
+    var ctx = c.ctx; if (!ctx) return;
+    var w = c.cv.width/DPR, h = c.cv.height/DPR;
+    ctx.clearRect(0,0,w,h);
+    var sc2 = Math.min(w/15, h/11), ox = w/2, oy = h/2;
+    ctx.strokeStyle='rgba(200,170,110,.12)'; ctx.lineWidth=1;
+    ctx.beginPath(); ctx.arc(ox,oy,Math.min(w,h)*0.40,0,TAU); ctx.stroke();
+
+    for (var i=0;i<c.bodies.length;i++){
+      var b = c.bodies[i];
+      b.tr.push([b.x,b.y]);
+      if (b.tr.length > 900) b.tr.shift();
+      ctx.beginPath();
+      for (var k=0;k<b.tr.length;k++){
+        var px = ox + b.tr[k][0]*sc2, py = oy - b.tr[k][1]*sc2;
+        if (k===0) ctx.moveTo(px,py); else ctx.lineTo(px,py);
+      }
+      ctx.strokeStyle = COLS[i]; ctx.globalAlpha = 0.42; ctx.lineWidth = 1.1; ctx.stroke();
+      ctx.globalAlpha = 1;
+      ctx.fillStyle = COLS[i];
+      ctx.beginPath(); ctx.arc(ox + b.x*sc2, oy - b.y*sc2, 3.0, 0, TAU); ctx.fill();
+      ctx.globalAlpha = .22;
+      ctx.beginPath(); ctx.arc(ox + b.x*sc2, oy - b.y*sc2, 8, 0, TAU); ctx.fill();
+      ctx.globalAlpha = 1;
+    }
+    c.val.textContent = 't = ' + c.t.toFixed(1) + (c.dev > 0 ? '　Δ = ' + c.dev.toFixed(2) : '');
+  }
+
+  /* ---------- 逃逸：誤差成長圖 ---------- */
+  var ec = document.getElementById('errCv'), ectx = null, ew=0, eh=0;
+  function buildErr(force){
+    if (!ec) return;
+    var r = ec.getBoundingClientRect();
+    if (r.width < 20 || r.height < 20) return;
+    if (!force && ectx && Math.abs(r.width-ew) < 2 && Math.abs(r.height-eh) < 2) return;
+    ew = r.width; eh = r.height;
+    ectx = fitCanvas(ec, ew, eh);
+    drawErr();
+  }
+  function drawErr(){
+    if (!ectx) return;
+    ectx.clearRect(0,0,ew,eh);
+    var padL = 40, padB = 20, padT = 10, padR = 10;
+    var w = ew - padL - padR, h = eh - padT - padB, i, j;
+    ectx.strokeStyle = 'rgba(200,170,110,.13)'; ectx.lineWidth = 1;
+    for (i=0;i<=4;i++){
+      var gy = padT + h*i/4;
+      ectx.beginPath(); ectx.moveTo(padL, gy); ectx.lineTo(padL+w, gy); ectx.stroke();
+    }
+    // 不可預測區
+    var tUn = 0.58;
+    ectx.fillStyle = 'rgba(200,90,70,.10)';
+    ectx.fillRect(padL + w*tUn, padT, w*(1-tUn), h);
+    ectx.fillStyle = 'rgba(224,130,110,.8)'; ectx.font = '10px Consolas, monospace';
+    ectx.fillText('不可預測', padL + w*tUn + 8, padT + 14);
+    ectx.fillStyle = 'rgba(200,170,110,.75)';
+    ectx.fillText('步長 ↓ 只是讓整條線下移，斜率不變', padL + 8, padT + 14);
+
+    var seeds = [1e-3, 1e-4, 1e-5], cols = ['#ffd9a0','#7fe6ef','#ff9b6b'];
+    for (var k=0;k<seeds.length;k++){
+      ectx.beginPath();
+      for (j=0;j<=180;j++){
+        var t = j/180;
+        var v = Math.log10(seeds[k]) + t*4.6;       // 對數座標下是直線：斜率固定
+        var vy = padT + h*(1 - Math.max(0, Math.min(1, (v+4)/4)));
+        var vx = padL + w*t;
+        if (j===0) ectx.moveTo(vx,vy); else ectx.lineTo(vx,vy);
+      }
+      ectx.strokeStyle = cols[k]; ectx.globalAlpha=.9; ectx.lineWidth=1.4; ectx.stroke(); ectx.globalAlpha=1;
+    }
+    ectx.fillStyle = '#7d8885'; ectx.font = '10px Consolas, monospace';
+    ectx.fillText('10⁻⁴', 4, padT + h);
+    ectx.fillText('10⁻²', 4, padT + h*0.5 + 4);
+    ectx.fillText('預測時間 →', padL + w - 64, eh - 4);
+  }
+
+  /* ---------- 主迴圈 ---------- */
+  var last = performance.now(), acc = 0;
+  function loop(now){
+    var t = now/1000, dt = Math.min(0.05, (now-last)/1000); last = now;
+    drawStars(t);
+    drawHero(t);
+    buildErr(false);
+    // 只在看得到時推進
+    var visible = box.offsetParent !== null;
+    if (visible){
+      acc += dt;
+      if (acc > 0.016){
+        var frames = Math.min(4, Math.round(acc/0.016)); acc = 0;
+        for (var f=0; f<frames; f++){
+          for (var i=0;i<cells.length;i++){
+            var c = cells[i];
+            for (var s=0;s<6;s++) stepBodies(c.bodies, 0.0042, 1);
+            c.t += 6*0.0042;
+            var far = false;
+            for (var k=0;k<c.bodies.length;k++){
+              if (Math.abs(c.bodies[k].x)>45 || Math.abs(c.bodies[k].y)>45) far = true;
+            }
+            if (far) resetCell(c);
+            drawCell(c);
+          }
+          // 與基準軌道的偏差（混沌的直接證據）
+          var base = cells[0].bodies;
+          for (var d=1; d<cells.length; d++){
+            var mx = 0;
+            for (var e=0;e<cells[d].bodies.length;e++){
+              var dx = cells[d].bodies[e].x - base[e].x, dy = cells[d].bodies[e].y - base[e].y;
+              mx = Math.max(mx, Math.sqrt(dx*dx+dy*dy));
+            }
+            cells[d].dev = mx;
+            drawCell(cells[d]);
+          }
+        }
+      }
+    }
+    requestAnimationFrame(loop);
+  }
+
+  buildStars(); buildHero(); buildChaos();
+  window.addEventListener('resize', function(){ buildStars(); buildHero(); resizeChaos(); buildErr(true); });
+  requestAnimationFrame(loop);
+})();
+</script>
+</body>
+</html>
