@@ -44,7 +44,7 @@
   .tab.on::after{content:"";position:absolute;left:12%;right:12%;bottom:-1px;height:2px;
     background:linear-gradient(90deg,transparent,var(--gold),transparent)}
   .me{margin-left:auto;display:flex;align-items:center;gap:10px;font-size:12px;color:#9aa3a0}
-  .me b{color:var(--gold-2);font-weight:600;letter-spacing:.06em}
+  .live{display:flex;align-items:center;gap:7px;padding:3px 10px;border:1px solid rgba(200,170,110,.25);background:rgba(200,170,110,.05);font-size:11px;letter-spacing:.1em;color:#e8e0cf}\n  .live i{width:6px;height:6px;border-radius:50%;background:#0ac8b9;box-shadow:0 0 8px #0ac8b9;display:inline-block}\n  .me b{color:var(--gold-2);font-weight:600;letter-spacing:.06em}
 
   /* 左側目錄 */
   .side{padding:18px 14px 10px;border-right:1px solid rgba(200,170,110,.14);
@@ -187,13 +187,13 @@
   <div class="topbar">
     <div class="brand"><div class="mark"></div>TRI&nbsp;SOLARIS</div>
     <div class="tabs">
-      <div class="tab on">三體問題</div>
-      <div class="tab">行星</div>
-      <div class="tab">紀元</div>
-      <div class="tab">文明</div>
-      <div class="tab">逃逸</div>
+      <div class="tab on" data-from="0" data-to="1">三體問題</div>
+      <div class="tab" data-from="2" data-to="2">行星</div>
+      <div class="tab" data-from="3" data-to="3">紀元</div>
+      <div class="tab" data-from="4" data-to="4">文明</div>
+      <div class="tab" data-from="5" data-to="6">逃逸</div>
     </div>
-    <div class="me"><b>地球往事</b><span>· 危機紀元前</span></div>
+    <div class="me"><div class="live"><i id="liveDot"></i><span id="liveEra">尚未開始</span></div><b>地球往事</b><span>· 危機紀元前</span></div>
   </div>
 
   <div class="side" id="side"></div>
@@ -231,7 +231,7 @@
           <p>既然沒有式子，就只能用數值方法一步步往前推。每一步都有誤差，所以<b>越往後算越不可信</b>——三體人算得再久也逃不掉這條界。</p></div>
       </div>
       <div class="sub" style="margin-top:22px">所以你眼前這個模擬，<b>不是動畫</b>：它用同一套積分器，從你按下去的那一刻起，一步步算出下一格位置。<br>下面三格是<b>同一組初始條件</b>，只差 0.002 與 0.02；<span class="g">Δ 是它跟基準軌道的最大偏差</span>，看它怎麼長大。</div>
-      <div class="chaos" id="chaos"></div>
+      <div class="chaos" id="chaosGrid"></div>
     </section>
 
     <section class="slide" data-ch="模擬器">
@@ -281,6 +281,11 @@
         <div class="sun s1" style="left:55%;top:38%"></div>
         <div class="sun s3" style="left:74%;top:26%"></div>
         <div class="planet" style="left:24%;top:74%"></div>
+        <div style="position:absolute;right:16px;top:12px;display:flex;align-items:center;gap:9px;padding:6px 12px;border:1px solid rgba(200,170,110,.3);background:rgba(6,10,14,.72)">
+          <span style="font-size:10px;letter-spacing:.26em;color:var(--gold)">現在模擬</span>
+          <b id="eraNow" style="font-size:14px;color:#0ac8b9;letter-spacing:.06em">尚未開始</b>
+          <span id="eraNowT" style="font-size:12px;color:#8d9794;font-family:Consolas,monospace">—</span>
+        </div>
         <div style="position:absolute;left:16px;bottom:12px;font-size:11px;letter-spacing:.22em;color:var(--gold)">三顆恆星的引力位勢：行星不管走到哪，都被三個方向同時拉扯</div>
       </div>
       <div class="cards" style="grid-template-columns:repeat(3,1fr);margin-top:14px">
@@ -377,6 +382,7 @@ side.innerHTML = '<h4>章節</h4>' + slides.map(function(s,i){
          '<div class="t">'+s.dataset.ch+'</div></div>';
 }).join('') + '<div class="foot">專題：三體問題 × 混沌<br>模擬：即時數值積分<br>文本：劉慈欣《三體》</div>';
 var chaps = Array.prototype.slice.call(side.querySelectorAll('.chap'));
+var tabs = Array.prototype.slice.call(document.querySelectorAll('.tab'));
 
 var cur = -1;
 function go(i){
@@ -385,6 +391,7 @@ function go(i){
   cur = i;
   slides.forEach(function(s,j){ s.classList.toggle('show', j===i); });
   chaps.forEach(function(c){ c.classList.toggle('on', +c.dataset.i === i); });
+  tabs.forEach(function(tb){ tb.classList.toggle('on', i >= +tb.dataset.from && i <= +tb.dataset.to); });
   document.getElementById('bar').style.width = ((i+1)/slides.length*100)+'%';
   document.querySelector('.bottom > div').textContent =
     String(i+1).padStart(2,'0') + ' / ' + String(slides.length).padStart(2,'0');
@@ -400,6 +407,7 @@ document.addEventListener('keydown', function(e){
   else if(e.key.toLowerCase()==='f'){ if(document.documentElement.requestFullscreen) document.documentElement.requestFullscreen(); }
 });
 chaps.forEach(function(c){ c.onclick = function(){ go(+c.dataset.i); }; });
+tabs.forEach(function(tb){ tb.onclick = function(){ go(+tb.dataset.from); }; tb.style.cursor='pointer'; });
 
 /* ===== 引力位勢插圖 ===== */
 (function(){
@@ -648,6 +656,14 @@ var sim = (function(){
     $('tNear').textContent = isFinite(j.dmin) ? (j.dmin*100).toFixed(1) + ' 單位' : '—';
     $('railNow').textContent = j.era + ' · t=' + t.toFixed(1) + ' · 文明 ' + civCount;
     $('railNow').style.color = COLOR[j.era];
+    var le=document.getElementById('liveEra');
+    if(le){ le.textContent = j.era + ' · ' + (isFinite(temp) ? temp + '°C' : '—'); le.style.color = COLOR[j.era]; }
+    var ld=document.getElementById('liveDot');
+    if(ld){ ld.style.background = COLOR[j.era]; ld.style.boxShadow = '0 0 8px ' + COLOR[j.era]; }
+    var en=document.getElementById('eraNow');
+    if(en){ en.textContent = j.era; en.style.color = COLOR[j.era]; }
+    var et2=document.getElementById('eraNowT');
+    if(et2){ et2.textContent = isFinite(temp) ? (temp + '°C') : '—'; }
 
     if(j.era !== lastEra){
       if(j.era !== '恆紀元' && lastEra === '恆紀元'){ civCount++; showEpoch(j.era); }
@@ -659,12 +675,11 @@ var sim = (function(){
 
   function loop(){
     raf = null;
-    if(!active_) return;
     if(running){
       for(var i=0;i<STEPS;i++) integrate();
       frame++;
       updateUI(judge());
-      draw();
+      if(active_) draw();
     }
     raf = requestAnimationFrame(loop);
   }
@@ -728,7 +743,7 @@ var sim = (function(){
     set active(v){
       active_ = v;
       if(v) start();
-      else if(raf){ cancelAnimationFrame(raf); raf = null; }
+      else if(!raf){ start(); }
     }
   };
 })();
@@ -859,7 +874,7 @@ fit();
   }
 
   /* ---------- 混沌三聯圖：同一組初始條件，差 0.001 與 0.01 ---------- */
-  var box = document.getElementById('chaos'), cells = [];
+  var box = document.getElementById('chaosGrid'), cells = [];
   var PERT = [0, 0.002, 0.02], COLS = ['#ffd9a0','#7fe6ef','#ff9b6b'];
   function mkBodies(eps){
     var arr = [
