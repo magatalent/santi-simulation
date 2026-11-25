@@ -93,7 +93,20 @@
   .stat .v small{font-size:12px;color:#8d9794;font-weight:400;margin-left:4px}
   .stat .d{font-size:11.5px;color:#8d9794;margin-top:8px;line-height:1.6}
 
-  .vcenter{height:100%;display:flex;flex-direction:column;justify-content:center}\n  /* 引言 */
+  .vcenter{height:100%;display:flex;flex-direction:column;justify-content:center}\n  /* 大氣儀表 */
+  .gbar{display:flex;align-items:center;gap:7px;margin:5px 0}
+  .gbar .bn{width:26px;font-size:10px;letter-spacing:.1em;color:#8d9794;font-family:Consolas,monospace}
+  .gbar i{flex:1;height:5px;background:rgba(255,255,255,.07);position:relative;overflow:hidden}
+  .gbar i b{position:absolute;left:0;top:0;bottom:0;width:20%;transition:width .25s linear}
+  .gbar .bv{width:46px;text-align:right;font-size:10.5px;font-family:Consolas,monospace;color:#cfc6b4}
+  /* 紀元卡片：當前紀元高亮 + 引言 */
+  .era-c{transition:border-color .3s,background .3s,opacity .3s;opacity:.62}
+  .era-c.on{opacity:1;border-color:rgba(10,200,185,.5);background:rgba(10,200,185,.055)}
+  .era-c.on .lb{color:#0ac8b9}
+  .q{margin-top:10px;padding-top:9px;border-top:1px solid rgba(200,170,110,.16);
+    font-size:13px;color:#e8e0cf;letter-spacing:.04em}
+  .q span{display:block;margin-top:5px;font-size:10.5px;color:#6d7673;letter-spacing:.06em}
+  /* 引言 */
   .quote{max-width:920px;font-size:30px;line-height:1.75;letter-spacing:.02em;color:#f2e9d8}
   .quote::before{content:"“";color:var(--gold);font-size:64px;line-height:0;vertical-align:-18px;margin-right:6px}
   .who{margin-top:22px;font-size:12px;letter-spacing:.28em;color:var(--gold)}
@@ -187,11 +200,11 @@
   <div class="topbar">
     <div class="brand"><div class="mark"></div>TRI&nbsp;SOLARIS</div>
     <div class="tabs">
-      <div class="tab on" data-from="0" data-to="1">三體問題</div>
-      <div class="tab" data-from="2" data-to="2">行星</div>
+      
+      <div class="tab on" data-from="2" data-to="2">行星</div>
       <div class="tab" data-from="3" data-to="3">紀元</div>
-      <div class="tab" data-from="4" data-to="4">文明</div>
-      <div class="tab" data-from="5" data-to="6">逃逸</div>
+      <div class="tab" data-from="4" data-to="6">文明</div>
+      
     </div>
     <div class="me"><div class="live"><i id="liveDot"></i><span id="liveEra">尚未開始</span></div><b>地球往事</b><span>· 危機紀元前</span></div>
   </div>
@@ -253,6 +266,13 @@
             <div class="v" id="tTemp" style="font-size:20px">20 <small>°C</small></div></div>
           <div class="stat" style="padding:9px 12px"><div class="k">最近恆星距離</div>
             <div class="v" id="tNear" style="font-size:18px">—</div></div>
+          <div class="card" style="padding:10px 12px">
+            <div class="lb" style="margin-bottom:8px">大氣組成<span id="atmTag" style="float:right;font-weight:400;font-size:9.5px;letter-spacing:.18em;color:#5f6966">—</span></div>
+            <div class="gbar"><span class="bn">O₂</span><i><b id="barO2" style="background:#0ac8b9"></b></i><span class="bv" id="valO2">21.0%</span></div>
+            <div class="gbar"><span class="bn">CO₂</span><i><b id="barCO2" style="background:#e0a44f"></b></i><span class="bv" id="valCO2">0.04%</span></div>
+            <div class="gbar"><span class="bn">N₂</span><i><b id="barN2" style="background:#5d6a72"></b></i><span class="bv" id="valN2">78%</span></div>
+            <div id="atmHint" style="font-size:10.5px;line-height:1.6;color:#5f6966;margin-top:7px">—</div>
+          </div>
           <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
             <button class="btn" id="bPause">暫停</button>
             <button class="btn" id="bReset">重置</button>
@@ -289,12 +309,15 @@
         <div style="position:absolute;left:16px;bottom:12px;font-size:11px;letter-spacing:.22em;color:var(--gold)">三顆恆星的引力位勢：行星不管走到哪，都被三個方向同時拉扯</div>
       </div>
       <div class="cards" style="grid-template-columns:repeat(3,1fr);margin-top:14px">
-        <div class="card"><div class="lb">恆紀元</div>
-          <p>行星穩定，文明發展、科學起飛。<b>但沒有人知道它會持續多久</b>——這正是三體世界最殘忍的地方：希望永遠是限時的。</p></div>
-        <div class="card"><div class="lb">亂紀元</div>
-          <p>軌道失控。文明的做法不是預測，是<b>脫水（Dehydration）</b>：把身體的水抽掉，捲成乾皮，等亂紀元過去再泡水甦醒。</p></div>
-        <div class="card"><div class="lb">三日連珠</div>
-          <p>三顆恆星連成一線，引力疊加、輻射暴增，行星瞬間沸騰。<b>這是文明的歸零鍵</b>，也是小說裡最著名的那一幕。</p></div>
+        <div class="card era-c" id="era-恆紀元"><div class="lb">恆紀元</div>
+          <p>行星穩定，文明發展、科學起飛。<b>但沒有人知道它會持續多久</b>——這正是三體世界最殘忍的地方：希望永遠是限時的。</p>
+          <div class="q">「恆紀元開始了。」<span>—— 三體世界最珍貴的季節</span></div></div>
+        <div class="card era-c" id="era-亂紀元"><div class="lb">亂紀元</div>
+          <p>軌道失控。文明的做法不是預測，是<b>脫水（Dehydration）</b>：把身體的水抽掉，捲成乾皮，等亂紀元過去再泡水甦醒。</p>
+          <div class="q">「脫水！脫水！」<span>—— 亂紀元來臨時，三體人的呼喊</span></div></div>
+        <div class="card era-c" id="era-三日連珠"><div class="lb">三日連珠</div>
+          <p>三顆恆星連成一線，引力疊加、輻射暴增，行星瞬間沸騰。<b>這是文明的歸零鍵</b>，也是小說裡最著名的那一幕。</p>
+          <div class="q">「三日凌空。」<span>—— 三日連珠，文明被烈焰抹平</span></div></div>
       </div>
     </section>
 
@@ -656,6 +679,37 @@ var sim = (function(){
     $('tNear').textContent = isFinite(j.dmin) ? (j.dmin*100).toFixed(1) + ' 單位' : '—';
     $('railNow').textContent = j.era + ' · t=' + t.toFixed(1) + ' · 文明 ' + civCount;
     $('railNow').style.color = COLOR[j.era];
+    /* 大氣指數：由溫度推導（示意模型，非真實大氣化學） */
+    (function(){
+      var E=function(id){return document.getElementById(id);};
+      var eO=E('valO2'); if(!eO) return;
+      var hot = isFinite(temp) ? Math.max(0, Math.min(1.15, (temp-40)/260)) : 1;
+      var cold = isFinite(temp) ? Math.max(0, Math.min(0.6, (-temp-25)/200)) : 0;
+      var o2  = Math.max(0.3, 21*(1 - 0.72*hot) );
+      var co2 = Math.min(96, 0.04 + 15*hot + 2*cold);
+      var n2  = Math.max(0, 100 - o2 - co2 - 0.93);
+      var note = !isFinite(temp) ? '行星已失去大氣'
+        : hot > 0.85 ? '地表沸騰：二氧化碳暴增，氧氣被燒掉'
+        : hot > 0.35 ? '酷熱：氧氣變稀、大氣被迫留熱'
+        : cold > 0.3 ? '嚴寒：二氧化碳凝結，氧氣稀薄'
+        : o2 > 16 ? '適合呼吸，文明可在地表活動'
+        : '氧氣不足，只能躲在密封城裡';
+      eO.textContent = o2 < 1 ? o2.toFixed(2)+'%' : o2.toFixed(1)+'%';
+      E('valCO2').textContent = co2 < 1 ? co2.toFixed(2)+'%' : co2.toFixed(1)+'%';
+      E('valN2').textContent  = n2.toFixed(1)+'%';
+      E('barO2').style.width  = Math.min(100, o2/21*100) + '%';
+      E('barCO2').style.width = Math.min(100, co2/30*100) + '%';
+      E('barN2').style.width  = Math.min(100, n2) + '%';
+      E('barCO2').style.background = co2 > 6 ? '#e05a4f' : (co2 > 0.5 ? '#e0a44f' : '#8d7a4f');
+      var live = (isFinite(temp) && temp >= 0 && temp <= 45 && o2 >= 16);
+      E('atmTag').textContent = live ? '宜居' : (j.era==='殲滅' ? '無大氣' : '不可居');
+      E('atmTag').style.color = live ? '#0ac8b9' : '#e05a4f';
+      E('atmHint').textContent = note;
+      var key = (j.era==='烈焰'||j.era==='殲滅') ? '三日連珠' : (j.era==='嚴寒' ? '亂紀元' : j.era);
+      ['恆紀元','亂紀元','三日連珠'].forEach(function(k){
+        var el = E('era-'+k); if(el) el.classList.toggle('on', k===key);
+      });
+    })();
     var le=document.getElementById('liveEra');
     if(le){ le.textContent = j.era + ' · ' + (isFinite(temp) ? temp + '°C' : '—'); le.style.color = COLOR[j.era]; }
     var ld=document.getElementById('liveDot');
